@@ -6,7 +6,7 @@
 /**
  * TODOs
  * prio2: fix css for userphoto
- * prio2: fix view so that it looks like any other profile view
+ * prio2: fix view so that it looks like any other profilecontroller view
  * prio2: view permission depending on roles
  * prio3: look for better hook than base_render_before
  * prio9: do research concerning "$Sender->EditMode(FALSE)"
@@ -33,8 +33,11 @@ class ProfileVisitorsPlugin extends Gdn_Plugin {
     * @return void
     */
    public function Setup() {
-      SaveToConfig('Plugins.ProfileVisitors.MaxListCount', '50');
-      SaveToConfig('Plugins.ProfileVisitors.HideDeletedUsers', '1');
+      SaveToConfig('Plugins.ProfileVisitors.MaxListCount', '25');
+      SaveToConfig('Plugins.ProfileVisitors.HideDeletedUsers', '0');
+      SaveToConfig('Plugins.ProfileVisitors.AllowedRoles', array('Administrator', 'Moderator', 'Member'));
+      SaveToConfig('Plugins.ProfileVisitors.NotifyVisit', '0');
+      
       $this->Structure();
    }
 
@@ -82,24 +85,31 @@ class ProfileVisitorsPlugin extends Gdn_Plugin {
       $Sender->SetData('Title', T('Profile Visitors Settings'));
       $Sender->AddSideMenu('dashboard/settings/plugins');
 
+      $RoleModel = new RoleModel();
+      $AllRoles = $RoleModel->GetArray();      
+      
       $Conf = new ConfigurationModule($Sender);
       $Conf->Initialize(array(
          'Plugins.ProfileVisitors.MaxListCount' => array(
             'LabelCode' => 'Number of visitors to show',
             'Control' => 'TextBox',
-            'Default' => '´50'
+            'Default' => '25'
          ),
          'Plugins.ProfileVisitors.HideDeletedUsers' => array(
             'LabelCode' => 'Hide deleted users and guests from list',
             'Control' => 'Checkbox',
-            'Default' => '1',
+            'Default' => '0',
             'Description' => T('HideDeletedUsersDescription', 'If that setting is changed, the visitor count could be wrong the first time a user looks at his profile afterwards.')
          ),
          'Plugins.ProfileVisitors.AllowedRoles' => array(
             'LabelCode' => 'Select roles that are allowed to see their own visitorlist',
             'Control' => 'CheckboxList',
-            'Default' => '1',
-            'Items' => array('Groucho', 'Larry', 'Curly', 'Chico', 'Harpo', 'Moe')
+            'Items' => $AllRoles
+         ),
+         'Plugins.ProfileVisitors.NotifyVisit' => array(
+            'LabelCode' => 'Add profile visits to activity',
+            'Control' => 'Checkbox',
+            'Default' => '0'
          )
       ));
       $Conf->RenderAll();
@@ -113,10 +123,13 @@ class ProfileVisitorsPlugin extends Gdn_Plugin {
     */
    public function ProfileController_AddProfileTabs_Handler($Sender){
       $ProfileUserID = $Sender->User->UserID;
+      $UserID = Gdn::Session()->UserID;
+      
       // only show menu entry in users own profile
-      if (Gdn::Session()->UserID != $ProfileUserID) {
+      if ($UserID != $ProfileUserID) {
          return;
       }
+      
       $ProfileVisitorsLabel = Sprite('SpProfileVisitors').' '.T('Profile Visitors');
       // show visitor count if config is set
       if (C('Vanilla.Profile.ShowCounts', TRUE)) {

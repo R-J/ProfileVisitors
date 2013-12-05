@@ -107,7 +107,7 @@ class ProfileVisitorsPlugin extends Gdn_Plugin {
             'Items' => $AllRoles
          ),
          'Plugins.ProfileVisitors.NotifyVisit' => array(
-            'LabelCode' => 'Add profile visits to activity',
+            'LabelCode' => 'Notify on profile visit',
             'Control' => 'Checkbox',
             'Default' => '0'
          )

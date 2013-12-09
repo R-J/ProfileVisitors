@@ -6,10 +6,6 @@
 /**
  * TODOs
  * prio2: fix css for userphoto
- * prio2: fix view so that it looks like any other profilecontroller view
- * prio2: view permission depending on roles
- * prio3: look for better hook than base_render_before
- * prio9: do research concerning "$Sender->EditMode(FALSE)"
  * prio9: add activity for watching profile
  */
 
@@ -21,6 +17,7 @@
    'MobileFriendly' => TRUE,
    'RequiredApplications' => array('Vanilla' => '>=2.1'),
    'SettingsPermission' => 'Garden.Settings.Manage',
+   'RegisterPermissions' => array('Plugins.ProfileVisitors.View' => 1),
    'SettingsUrl' => '/settings/profilevisitors',
    'HasLocale' => TRUE
 );
@@ -33,10 +30,19 @@ class ProfileVisitorsPlugin extends Gdn_Plugin {
     * @return void
     */
    public function Setup() {
-      SaveToConfig('Plugins.ProfileVisitors.MaxListCount', '25');
-      SaveToConfig('Plugins.ProfileVisitors.HideDeletedUsers', '0');
-      SaveToConfig('Plugins.ProfileVisitors.AllowedRoles', array('Administrator', 'Moderator', 'Member'));
-      SaveToConfig('Plugins.ProfileVisitors.NotifyVisit', '0');
+      // Set config settings only if they are not already set
+      if (!C('Plugins.ProfileVisitors.MaxListCount')) {
+         SaveToConfig('Plugins.ProfileVisitors.MaxListCount', '25');
+      }
+      if (!C('Plugins.ProfileVisitors.HideDeletedUsers')) {
+         SaveToConfig('Plugins.ProfileVisitors.HideDeletedUsers', '0');
+      }
+      if (!C('Plugins.ProfileVisitors.NotifyVisit')) {
+         SaveToConfig('Plugins.ProfileVisitors.NotifyVisit', '0');
+      }
+      if (!C('Plugins.ProfileVisitors.PurgeOnDisable')) {
+         SaveToConfig('Plugins.ProfileVisitors.PurgeOnDisable', '0');
+      }
       
       $this->Structure();
    }
@@ -67,11 +73,13 @@ class ProfileVisitorsPlugin extends Gdn_Plugin {
     * @return void
     */
    public function OnDisable() {
-      // remove all config entries
-      RemoveFromConfig('Plugins.ProfileVisitors');
-      // drop tables
-      Gdn::Structure()->Table('Profilevisitor')->Drop();
-      Gdn::Structure()->Table('User')->DropColumn('CountProfilevisitors');
+      if (C('Plugins.ProfileVisitors.PurgeOnDisable') == TRUE ) {
+         // remove all config entries
+         RemoveFromConfig('Plugins.ProfileVisitors');
+         // drop tables
+         Gdn::Structure()->Table('Profilevisitor')->Drop();
+         Gdn::Structure()->Table('User')->DropColumn('CountProfilevisitors');
+      }
    }
 
    /**
@@ -101,15 +109,16 @@ class ProfileVisitorsPlugin extends Gdn_Plugin {
             'Default' => '0',
             'Description' => T('HideDeletedUsersDescription', 'If that setting is changed, the visitor count could be wrong the first time a user looks at his profile afterwards.')
          ),
-         'Plugins.ProfileVisitors.AllowedRoles' => array(
-            'LabelCode' => 'Select roles that are allowed to see their own visitorlist',
-            'Control' => 'CheckboxList',
-            'Items' => $AllRoles
-         ),
          'Plugins.ProfileVisitors.NotifyVisit' => array(
             'LabelCode' => 'Notify on profile visit',
             'Control' => 'Checkbox',
             'Default' => '0'
+         ),
+         'Plugins.ProfileVisitors.PurgeOnDisable' => array(
+            'LabelCode' => 'Purge on disable',
+            'Control' => 'Checkbox',
+            'Default' => '0',
+            'Description' => T('PurgeOnDisableDescription', 'Purge all settings and data when plugin is disabled.')
          )
       ));
       $Conf->RenderAll();
@@ -122,6 +131,10 @@ class ProfileVisitorsPlugin extends Gdn_Plugin {
     * @return void
     */
    public function ProfileController_AddProfileTabs_Handler($Sender){
+      if (!Gdn::Session()->CheckPermission('Plugins.ProfileVisitors.View')) {
+         return;
+      }
+
       $ProfileUserID = $Sender->User->UserID;
       $UserID = Gdn::Session()->UserID;
       
@@ -144,14 +157,31 @@ class ProfileVisitorsPlugin extends Gdn_Plugin {
     * @param ProfileController $Sender The object calling this method
     * @return void
     */
-   public function ProfileController_Visitors_Create($Sender){
-      // check for permission to view profile
-      $Sender->Permission('Garden.Profiles.View');
-// $Sender->EditMode(FALSE); // do i need that? don't think so...
+   public function ProfileController_Visitors_Create($Sender) {
+      // calls function Controller_Index
+      $this->Dispatch($Sender); 
+   }
+
+   public function Controller_Index($Sender) {
+      $Sender->Permission(array(
+         'Garden.Profiles.View',
+         'Plugins.ProfileVisitors.View'
+      ));
+  
+      // don't show edit profile menu
+      $Sender->EditMode(FALSE); 
+      // get user id
+      $Session = Gdn::Session();
+      $UserID = $Session->User->UserID;
+      // set user info
+      $Sender->GetUserInfo('', '', $UserID, TRUE);
+
+      $Sender->SetData('Title', T('Profile Visitors'));
       $Sender->SetData('Breadcrumbs', array(
             array('Name' => T('Profile'), 'Url' => '/profile'),
             array('Name' => T('Visitors'), 'Url' => '/profile/visitors'))
       );
+
       // check if output is limited
       $MaxListCount = C('Plugins.ProfileVisitors.MaxListCount');
       if ($MaxListCount >= 0 ) {
@@ -159,11 +189,15 @@ class ProfileVisitorsPlugin extends Gdn_Plugin {
       } else {
          $Limit = '';
       }
-      $Sender->SetData('Limit', $Limit);
+      
       // get list of visitors from db
-      $Sender->SetData('Visitors', ProfileVisitorsModel::Get(Gdn::Session()->UserID, $Limit));
+      $Sender->SetData('Visitors', ProfileVisitorsModel::Get($UserID, $Limit));
+
       // render view
-      $Sender->Render('visitors', '', 'plugins/ProfileVisitors');
+      $MyView = $this->GetView('visitors.php');
+      $Sender->SetTabView(T('Profile Visitors'), $MyView);
+      $ProfileView = $Sender->FetchViewLocation('index', 'ProfileController', 'dashboard');
+      $Sender->Render($ProfileView);
    }
 
    /**
@@ -172,10 +206,11 @@ class ProfileVisitorsPlugin extends Gdn_Plugin {
     * @param Controller $Sender The object calling this method
     * @return void
     */
-   public function Base_Render_Before($Sender) {
-      // only do this for Profile Controller
-      if (get_class($Sender) != 'ProfileController') {
-         return;
+   public function ProfileController_BeforeRenderAsset_Handler($Sender) {
+      // only do this for content of profile controller
+      $AssetName = GetValueR('EventArguments.AssetName', $Sender);
+      if ($AssetName != "Content") {
+         return;         
       }
       // if user is looking at own profile, just update count, then exit
       $UserID = Gdn::Session()->UserID;

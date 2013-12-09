@@ -1,17 +1,20 @@
 <?php if (!defined('APPLICATION')) exit(); ?>
 <h2 class="H"><?php echo T('Recent Profile Visitors') ?></h2>
-<ul class="DataList ProfileVisitors">
+<ul class="DataList ProfileVisitors Activities">
 
 <?php
 $Visitors = $this->Data('Visitors');
    foreach ($Visitors as $Visitor) {
       $UserID = $Visitor['UserID'];
       $User = UserBuilder($Visitor);
+      $PhotoAnchor = UserPhoto($User);
 ?>
 <li class="Item Activity" id="User_<?php echo $UserID; ?>">
-   <div class="Author Photo">
-      <?php echo UserPhoto($User); ?>   
-   </div>
+  <?php
+    if ($PhotoAnchor != '') {
+   ?>
+   <div class="Author Photo"><?php echo $PhotoAnchor; ?></div>
+   <?php } ?>
 
    <div class="ItemContent Activity">
       <div class="Title">
@@ -21,9 +24,11 @@ $Visitors = $this->Data('Visitors');
    } else {
       echo UserAnchor($User, 'Username');
    }
-   echo T(' on ').Gdn_Format::Date($Visitor['DateUpdated']);
-?>
+   ?>
       </div>
+     <div class="Meta">
+       <span class="MItem DateCreated"><?php echo Gdn_Format::Date($Visitor['DateUpdated']); ?></span>
+     </div>
       <!-- <div class="Excerpt">&nbsp;</div> -->
    </div>
 </li>

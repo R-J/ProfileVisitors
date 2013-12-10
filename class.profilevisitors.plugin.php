@@ -5,7 +5,6 @@
 
 /**
  * TODOs
- * prio2: fix css for userphoto
  * prio9: add activity for watching profile
  */
 
@@ -163,19 +162,28 @@ class ProfileVisitorsPlugin extends Gdn_Plugin {
    }
 
    public function Controller_Index($Sender) {
+      $ProfileUserID = $Sender->RequestArgs[0];  
+      $UserID = Gdn::Session()->User->UserID;
+
+      // if wrong user, redirect to standard profile view
+      if ($ProfileUserID != $UserID) {
+         $ProfileUserName =  Gdn::UserModel()->GetID($ProfileUserID)->Name;
+         Redirect('/profile/'.$ProfileUserID.'/'.$ProfileUserName);
+      }
+
+      // check permissions
       $Sender->Permission(array(
          'Garden.Profiles.View',
          'Plugins.ProfileVisitors.View'
       ));
-  
+
       // don't show edit profile menu
       $Sender->EditMode(FALSE); 
-      // get user id
-      $Session = Gdn::Session();
-      $UserID = $Session->User->UserID;
+
       // set user info
       $Sender->GetUserInfo('', '', $UserID, TRUE);
 
+      // set data for view
       $Sender->SetData('Title', T('Profile Visitors'));
       $Sender->SetData('Breadcrumbs', array(
             array('Name' => T('Profile'), 'Url' => '/profile'),
@@ -189,7 +197,7 @@ class ProfileVisitorsPlugin extends Gdn_Plugin {
       } else {
          $Limit = '';
       }
-      
+
       // get list of visitors from db
       $Sender->SetData('Visitors', ProfileVisitorsModel::Get($UserID, $Limit));
 
@@ -206,22 +214,14 @@ class ProfileVisitorsPlugin extends Gdn_Plugin {
     * @param Controller $Sender The object calling this method
     * @return void
     */
-   public function ProfileController_BeforeRenderAsset_Handler($Sender) {
-      // only do this for content of profile controller
-      $AssetName = GetValueR('EventArguments.AssetName', $Sender);
-      if ($AssetName != "Content") {
-         return;         
-      }
-      // if user is looking at own profile, just update count, then exit
-      $UserID = Gdn::Session()->UserID;
-      $ProfileUserID = $Sender->User->UserID;
-      if ($UserID == $ProfileUserID || $ProfileUserID == '') {
-         ProfileVisitorsModel::SetCount($ProfileUserID);
-         return;
-      }
+  public function ProfileController_Render_Before($Sender) {
+    $UserID = Gdn::Session()->UserID;
+    $ProfileUserID = $Sender->User->UserID;
+    if ($UserID != $ProfileUserID) {
       // save visit to db
       ProfileVisitorsModel::SaveVisit($ProfileUserID, $UserID);
-      // update visitor counter in table user
-      ProfileVisitorsModel::SetCount($ProfileUserID);
-   }
+    }
+    // update visitor counter in table user
+    ProfileVisitorsModel::SetCount($ProfileUserID);
+  }
 }

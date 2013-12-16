@@ -2,13 +2,7 @@
 /**
  * Plugin to show a list of users who have visited your profile
  */
-
-/**
- * TODOs
- * prio9: add activity for watching profile
- */
-
- $PluginInfo['ProfileVisitors'] = array(
+$PluginInfo['ProfileVisitors'] = array(
    'Name' => 'Profile Visitors',
    'Description' => 'Tracks profile visits and gives user the option to see who has visited ',
    'Version' => '0.1',
@@ -36,13 +30,11 @@ class ProfileVisitorsPlugin extends Gdn_Plugin {
       if (!C('Plugins.ProfileVisitors.HideDeletedUsers')) {
          SaveToConfig('Plugins.ProfileVisitors.HideDeletedUsers', '0');
       }
-      if (!C('Plugins.ProfileVisitors.NotifyVisit')) {
-         SaveToConfig('Plugins.ProfileVisitors.NotifyVisit', '0');
-      }
       if (!C('Plugins.ProfileVisitors.PurgeOnDisable')) {
          SaveToConfig('Plugins.ProfileVisitors.PurgeOnDisable', '0');
       }
       
+      // set up tables
       $this->Structure();
    }
 
@@ -107,11 +99,6 @@ class ProfileVisitorsPlugin extends Gdn_Plugin {
             'Control' => 'Checkbox',
             'Default' => '0',
             'Description' => T('HideDeletedUsersDescription', 'If that setting is changed, the visitor count could be wrong the first time a user looks at his profile afterwards.')
-         ),
-         'Plugins.ProfileVisitors.NotifyVisit' => array(
-            'LabelCode' => 'Notify on profile visit',
-            'Control' => 'Checkbox',
-            'Default' => '0'
          ),
          'Plugins.ProfileVisitors.PurgeOnDisable' => array(
             'LabelCode' => 'Purge on disable',
@@ -214,14 +201,14 @@ class ProfileVisitorsPlugin extends Gdn_Plugin {
     * @param Controller $Sender The object calling this method
     * @return void
     */
-  public function ProfileController_Render_Before($Sender) {
-    $UserID = Gdn::Session()->UserID;
-    $ProfileUserID = $Sender->User->UserID;
-    if ($UserID != $ProfileUserID) {
-      // save visit to db
-      ProfileVisitorsModel::SaveVisit($ProfileUserID, $UserID);
-    }
-    // update visitor counter in table user
-    ProfileVisitorsModel::SetCount($ProfileUserID);
-  }
+   public function ProfileController_Render_Before($Sender) {
+      $UserID = Gdn::Session()->UserID;
+      $ProfileUserID = $Sender->User->UserID;
+      if ($UserID != $ProfileUserID) {
+         // save visit to db
+         ProfileVisitorsModel::SaveVisit($ProfileUserID, $UserID);
+      }
+      // update visitor counter in table user
+      ProfileVisitorsModel::SetCount($ProfileUserID);
+   }
 }

@@ -1,0 +1,12 @@
+<?php if (!defined('APPLICATION')) exit();
+$Definition['Profile Visitors'] = 'Profile Visitors';
+$Definition['Profile'] = 'Profile';
+$Definition['Visitors'] = 'Visitors';
+$Definition['Recent Profile Visitors'] = 'Recent Profile Visitors';
+$Definition['Guest'] = 'Some nosy guest';
+$Definition['Profile Visitors Settings'] = 'Profile Visitors Settings';
+$Definition['Number of visitors to show'] = 'Number of visitors to show';
+$Definition['Hide deleted users and guests from list'] = 'Hide deleted users and guests from list';
+$Definition['HideDeletedUsersDescription'] = 'If that setting is changed, the visitor count could be wrong the first time a user looks at his profile afterwards.';
+$Definition['Purge on disable'] = 'Purge on disable';
+$Definition['PurgeOnDisableDescription'] = 'Purge all settings and data when plugin is disabled.';

@@ -5,10 +5,10 @@
 $PluginInfo['ProfileVisitors'] = array(
    'Name' => 'Profile Visitors',
    'Description' => 'Tracks profile visits and gives user the option to see who has visited ',
-   'Version' => '0.1',
+   'Version' => '0.2',
    'Author' => 'Robin',
    'MobileFriendly' => TRUE,
-   'RequiredApplications' => array('Vanilla' => '>=2.1'),
+   'RequiredApplications' => array('Vanilla' => '>=2.0'),
    'SettingsPermission' => 'Garden.Settings.Manage',
    'RegisterPermissions' => array('Plugins.ProfileVisitors.View' => 1),
    'SettingsUrl' => '/settings/profilevisitors',
@@ -128,8 +128,14 @@ class ProfileVisitorsPlugin extends Gdn_Plugin {
       if ($UserID != $ProfileUserID) {
          return;
       }
-      
-      $ProfileVisitorsLabel = Sprite('SpProfileVisitors').' '.T('Profile Visitors');
+   
+      // for compatibility with Vanilla 2.0.18
+      if (function_exists('Sprite')) {
+         $ProfileVisitorsLabel = Sprite('SpProfileVisitors').' '.T('Profile Visitors');
+      } else {
+         $ProfileVisitorsLabel = T('Profile Visitors');
+      }
+
       // show visitor count if config is set
       if (C('Vanilla.Profile.ShowCounts', TRUE)) {
          $ProfileVisitorsLabel .= '<span class="Aside">'.CountString(GetValueR('User.CountProfilevisitors', $Sender, NULL), "/profile/count/profilevisitors?userid=$UserID").'</span>';
@@ -164,8 +170,11 @@ class ProfileVisitorsPlugin extends Gdn_Plugin {
          'Plugins.ProfileVisitors.View'
       ));
 
-      // don't show edit profile menu
-      $Sender->EditMode(FALSE); 
+      // for compatibility with Vanilla 2.0.18
+      if (in_array('EditMode', get_class_methods($Sender))) {
+         // don't show edit profile menu; only necessary in Vanilla 2.1b2
+         $Sender->EditMode(FALSE); 
+      }
 
       // set user info
       $Sender->GetUserInfo('', '', $UserID, TRUE);

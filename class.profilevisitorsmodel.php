@@ -72,7 +72,7 @@ class ProfileVisitorsModel extends VanillaModel {
     * @return void
     */
    public function SaveVisit($ProfileUserID, $UpdateUserID) {
-      if (!is_numeric($ProfileUserID) || !is_numeric($UpdateUserID) || $ProfileUserID <= 0 || $UpdateUserID <= 0) {
+      if (!is_numeric($ProfileUserID) || !is_numeric($UpdateUserID) || $ProfileUserID <= 0 || $UpdateUserID < 0) {
          return;
       }
       GDN::SQL()

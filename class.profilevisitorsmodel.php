@@ -10,6 +10,9 @@ class ProfileVisitorsModel extends VanillaModel {
     * @return array          Listing of profileuserid, visitor id, visitor name and date visited
     */
    public function Get($UserID, $Limit = '') {
+      if (!is_numeric($UserID) || $UserID <= 0) {
+         return;
+      }      
       $Query = GDN::SQL();
       // check if resultset should be limited
       if (is_numeric($Limit) && $Limit > 0) {
@@ -37,6 +40,9 @@ class ProfileVisitorsModel extends VanillaModel {
     * @return integer visitor count
     */
    public function SetCount($UserID) {
+      if (!is_numeric($UserID) || $UserID <= 0) {
+         return;
+      }     
       $Query = GDN::SQL();
       // exclude deleted users if config is set
       if (C('Plugins.ProfileVisitors.HideDeletedUsers') == 1) {
@@ -66,6 +72,9 @@ class ProfileVisitorsModel extends VanillaModel {
     * @return void
     */
    public function SaveVisit($ProfileUserID, $UpdateUserID) {
+      if (!is_numeric($ProfileUserID) || !is_numeric($UpdateUserID) || $ProfileUserID <= 0 || $UpdateUserID <= 0) {
+         return;
+      }
       GDN::SQL()
          ->History(TRUE, FALSE)
          ->Replace('Profilevisitor',

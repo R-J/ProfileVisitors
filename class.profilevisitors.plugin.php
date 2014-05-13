@@ -5,7 +5,7 @@
 $PluginInfo['ProfileVisitors'] = array(
    'Name' => 'Profile Visitors',
    'Description' => 'Tracks profile visits and gives user the option to see who has visited ',
-   'Version' => '0.3',
+   'Version' => '0.3.1',
    'Author' => 'Robin',
    'MobileFriendly' => TRUE,
    'RequiredApplications' => array('Vanilla' => '>=2.0'),
